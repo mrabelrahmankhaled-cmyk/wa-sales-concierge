@@ -91,3 +91,5 @@ Then review `src/stores/my-store/config.json` and `catalog.json`, and open `http
    - **Callback URL:** `https://<your-domain>/api/webhook/whatsapp`
    - **Verify Token:** exact value of `WHATSAPP_VERIFY_TOKEN`
    - Click **Verify and Save**, then subscribe to the **`messages`** webhook field.
+
+<!-- deploy-trigger: 2026-11-25 -->
