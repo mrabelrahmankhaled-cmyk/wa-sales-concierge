@@ -11,13 +11,24 @@ function cleanCategoryLabel(rawCategory: string): string {
   return stripped || "قطع مميزة";
 }
 
+function isShortReadableCode(code: string): boolean {
+  const trimmed = code.trim();
+  if (!trimmed || trimmed.length > 10) return false;
+  // Reject 9+ digit numeric IDs (with or without a leading 'P')
+  if (/^[Pp]?\d{8,}$/.test(trimmed)) return false;
+  return true;
+}
+
 function buildDynamicQuickPrompts(store: LoadedStore): string[] {
   const { catalog, config } = store;
   const inStockItems = catalog.filter((p) => p.inStock);
   const pool = inStockItems.length > 0 ? inStockItems : catalog;
 
-  // 1. First in-stock product code
-  const firstProduct = pool[0];
+  // 1. Prefer first in-stock product with a short readable alphanumeric code (not a 9+ digit numeric ID)
+  const firstProduct =
+    pool.find((p) => /^[A-Za-z]{1,4}-?\d{2,5}$/.test(p.code.trim())) ??
+    pool.find((p) => isShortReadableCode(p.code)) ??
+    pool[0];
   const chip1 = firstProduct
     ? `بكم قطعة ${firstProduct.code} وهل متوفرة؟`
     : "ما هي أبرز القطع المتوفرة حالياً؟";

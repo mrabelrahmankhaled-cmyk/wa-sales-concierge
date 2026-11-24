@@ -89,37 +89,57 @@ export function inferWeightGrams(text) {
 }
 
 /**
- * Extracts a clean product code (like `B039`, `[B039]`, `R104`) from SKU, title, or URL.
- * Carefully avoids mistaking karat strings (`18K`, `21K`, `22K`, `24K`) for product codes.
+ * Extracts a clean customer-facing product code (like `R039`, `N039`, `B039`) from title, SKU, or URL.
+ * Prioritizes short alphanumeric codes (`/\[?([A-Za-z]{1,4}-?\d{2,5})\]?/`) over internal 9-10 digit
+ * Salla/Zid numeric IDs, while avoiding mistaking karat strings (`18K`, `21K`, `22K`, `24K`) for codes.
  */
 export function extractProductCode({ sku, title = "", url = "", index = 1 }) {
-  const cleanSku = String(sku ?? "").trim();
-  if (cleanSku && /^[a-z0-9\-_]{2,24}$/i.test(cleanSku) && !/^(18|21|22|24)k$/i.test(cleanSku)) {
-    return cleanSku.toUpperCase();
-  }
-
+  const isKaratToken = (val) => /^(18|21|22|24)k$/i.test(val);
+  const cleanSku = toArabicWesternDigits(String(sku ?? "").trim());
   const normTitle = toArabicWesternDigits(title);
 
-  // Bracketed or labeled code in title: e.g. "[B039]", "(B039)", "كود B039", "رمز: R104"
+  // 1. Short alphanumeric SKU (e.g., "R039", "[B039]", "R-104" — NOT a long numeric Salla ID)
+  const alphaSkuMatch = cleanSku.match(/^\[?([A-Za-z]{1,4}-?\d{2,5})\]?$/);
+  if (alphaSkuMatch && !isKaratToken(alphaSkuMatch[1])) {
+    return alphaSkuMatch[1].toUpperCase();
+  }
+
+  // 2. Bracketed or labeled short alphanumeric code in title (e.g., "[R039]", "(N039)", "كود B039")
   const bracketOrLabelMatch = normTitle.match(
-    /(?:\[|\(|(?:كود|رمز|موديل|قطعة|code|sku)\s*[:#-]?\s*)([A-Za-z]{1,4}-?\d{2,6})(?:\]|\))?/i
+    /(?:\[|\(|(?:كود|رمز|موديل|قطعة|code|sku)\s*[:#-]?\s*)([A-Za-z]{1,4}-?\d{2,5})(?:\]|\))?/i
   );
-  if (bracketOrLabelMatch && !/^(18|21|22|24)k$/i.test(bracketOrLabelMatch[1])) {
+  if (bracketOrLabelMatch && !isKaratToken(bracketOrLabelMatch[1])) {
     return bracketOrLabelMatch[1].toUpperCase();
   }
 
-  // Standalone code token in title like "B039" or "R-104"
-  const tokenMatches = normTitle.match(/\b([A-Za-z]{1,3}-?\d{2,6})\b/g) || [];
-  for (const candidate of tokenMatches) {
-    if (!/^(18|21|22|24)k$/i.test(candidate)) {
+  // 3. Any short alphanumeric code in title matching /\[?([A-Za-z]{1,4}-?\d{2,5})\]?/
+  const titleCodeMatches = normTitle.matchAll(/\[?([A-Za-z]{1,4}-?\d{2,5})\]?/g);
+  for (const match of titleCodeMatches) {
+    const candidate = match[1];
+    if (candidate && !isKaratToken(candidate)) {
       return candidate.toUpperCase();
     }
   }
 
-  // Salla URL `/p12345678` suffix
+  // 4. Short alphanumeric code slug in URL path (excluding Salla's trailing `/p1928559766`)
+  try {
+    const pathname = decodeURIComponent(new URL(url).pathname).replace(/\/p\d{6,}(?:\/|$)/i, "");
+    const slugMatch = pathname.match(/(?:^|\/|-)([A-Za-z]{1,4}-?\d{2,5})(?=-|\/|$)/);
+    if (slugMatch && !isKaratToken(slugMatch[1])) {
+      return slugMatch[1].toUpperCase();
+    }
+  } catch {
+    // Ignore relative or invalid URLs
+  }
+
+  // 5. Fallback: numeric SKU or Salla URL `/p<digits>` ID when no alphanumeric code exists
+  if (cleanSku && /^[a-z0-9\-_]{2,24}$/i.test(cleanSku) && !isKaratToken(cleanSku)) {
+    return cleanSku.toUpperCase();
+  }
+
   const sallaUrlMatch = String(url).match(/\/p(\d{4,12})(?:[/?#]|$)/i);
   if (sallaUrlMatch) {
-    return `P${sallaUrlMatch[1]}`;
+    return sallaUrlMatch[1];
   }
 
   return `P${String(index).padStart(3, "0")}`;

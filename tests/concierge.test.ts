@@ -696,6 +696,40 @@ describe("5. Store Importer CLI (CSV, Sitemap XML & Schema.org JSON-LD Product P
     assert.equal(parsed.weightGrams, 3.45);
   });
 
+  it("prioritizes short alphanumeric title code [R039] over 10-digit numeric Salla JSON-LD sku", () => {
+    const sallaProductHtml = `<!doctype html>
+      <html lang="ar">
+      <head>
+        <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "sku": "1928559766",
+            "name": "[R039] خاتم من الفضة لون روز قولد",
+            "offers": {
+              "@type": "Offer",
+              "price": "85",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        </script>
+      </head>
+      <body><h1>[R039] خاتم من الفضة لون روز قولد</h1></body>
+      </html>`;
+
+    const parsed = parseProductPageHtml(
+      sallaProductHtml,
+      "https://emerald-jw.com/r039-خاتم-من-الفضة-لون-روز-قولد/p1928559766",
+      1
+    );
+    assert.ok(parsed);
+    assert.equal(parsed.code, "R039");
+
+    const emeraldStore = loadStore("emerald-jw", { bypassCache: true });
+    assert.equal(emeraldStore.catalog[0].code, "R039");
+    assert.equal(emeraldStore.catalog[0].inStock, true);
+  });
+
   it("falls back to sitemap.xml when Salla/Zid homepage renders 0 client-side products", async () => {
     const mockFetch: typeof fetch = async (input) => {
       const url = String(input);
