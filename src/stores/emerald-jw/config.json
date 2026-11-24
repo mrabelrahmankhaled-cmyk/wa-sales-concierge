@@ -1,0 +1,20 @@
+{
+  "slug": "emerald-jw",
+  "storeName": "Emerald Jewelry",
+  "dialect": "Saudi Arabic",
+  "currency": "SAR",
+  "shippingPolicy": "شحن سريع ومؤمن لجميع مناطق المملكة خلال 2 إلى 5 أيام عمل.",
+  "installments": {
+    "enabled": true,
+    "providers": [
+      "Tabby",
+      "Tamara"
+    ],
+    "installmentCount": 4,
+    "details": "متوفر التقسيط الميسر عبر تابي (Tabby) وتمارا (Tamara) على 4 دفعات شهرية بدون فوائد وفق الشروط الموضحة في صفحة الدفع."
+  },
+  "returnPolicy": "يخضع الاستبدال والاسترجاع لسياسة المتجر المعتمدة خلال 7 أيام من تاريخ الاستلام بشرط سلامة القطعة والفاتورة.",
+  "workingHours": "يومياً من 10:00 صباحاً حتى 10:00 مساءً (بتوقيت الرياض).",
+  "humanHandoffPhone": "+966583364918",
+  "greetingMessage": "يا هلا وحياك الله في *Emerald Jewelry* ✨\nكيف أقدر أخدمك اليوم؟ اسألني عن أي قطعة أو كود منتج أو ميزانيتك وأبشر بالخير."
+}

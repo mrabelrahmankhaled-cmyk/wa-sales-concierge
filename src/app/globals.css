@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --wa-header: #075e54;
+  --wa-header-dark: #054c44;
+  --wa-accent: #25d366;
+  --wa-chat-bg: #efeae2;
+  --wa-outgoing: #d9fdd3;
+  --wa-incoming: #ffffff;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, "Arabic Typesetting", "Geeza Pro", system-ui, -apple-system,
+    sans-serif;
+  background-color: #f0f2f5;
+  color: #111b21;
+  margin: 0;
+}
+
+/* Subtle WhatsApp-inspired doodle dot pattern */
+.wa-chat-wallpaper {
+  background-color: #efeae2;
+  background-image: radial-gradient(rgba(17, 27, 33, 0.055) 1px, transparent 0),
+    radial-gradient(rgba(7, 94, 84, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
