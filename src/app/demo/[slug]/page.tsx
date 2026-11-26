@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 import WhatsAppSimulator from "@/components/WhatsAppSimulator";
 import { isGeminiConfigured } from "@/lib/agent";
@@ -5,6 +6,12 @@ import { loadStore, StoreNotFoundError } from "@/lib/store";
 import type { LoadedStore } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
 
 function cleanCategoryLabel(rawCategory: string): string {
   const stripped = rawCategory.replace(/\s*\([^)]*\)\s*/g, "").trim();

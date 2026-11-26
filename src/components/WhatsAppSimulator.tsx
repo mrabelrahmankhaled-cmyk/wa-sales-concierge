@@ -130,14 +130,19 @@ export default function WhatsAppSimulator({
   const [apiKeyMissing, setApiKeyMissing] = useState(initialApiKeyMissing);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSessionId(createSessionId());
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages, isLoading]);
 
   async function sendMessage(rawText: string) {
@@ -255,11 +260,11 @@ export default function WhatsAppSimulator({
     }));
 
   return (
-    <div className="min-h-screen bg-[#e5ddd5] sm:bg-slate-200 flex flex-col items-center justify-start sm:py-4 sm:px-4">
+    <div className="h-[100dvh] overflow-hidden p-0 bg-[#e5ddd5] md:min-h-screen md:h-auto md:bg-slate-200 md:p-4 md:overflow-auto flex flex-col items-center justify-start md:justify-center">
       {/* Missing API Key Banner */}
       {apiKeyMissing && (
-        <div className="w-full max-w-5xl mb-2 px-3 sm:px-0">
-          <div className="rounded-xl border border-amber-400 bg-amber-50 text-amber-950 px-4 py-3 shadow-sm text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="w-full max-w-5xl shrink-0 mb-0 md:mb-2 px-3 py-2 md:p-0">
+          <div className="rounded-xl border border-amber-400 bg-amber-50 text-amber-950 px-4 py-2.5 md:py-3 shadow-sm text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <span className="font-bold">⚠️ مفتاح GEMINI_API_KEY غير مضبوط في .env.local: </span>
               <span>
@@ -280,14 +285,20 @@ export default function WhatsAppSimulator({
 
       {/* Main Container (Mobile-first WhatsApp frame + optional Collapsible Developer Inspector) */}
       <div
-        className={`w-full ${
-          inspectorOpen ? "max-w-5xl grid lg:grid-cols-[1fr_400px] gap-4" : "max-w-md"
-        } flex-1 sm:flex-initial`}
+        className={`w-full flex-1 min-h-0 md:flex-initial ${
+          inspectorOpen
+            ? "max-w-5xl flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-2 md:gap-4"
+            : "max-w-md"
+        }`}
       >
         {/* WhatsApp Phone Frame */}
-        <div className="flex flex-col h-[100dvh] sm:h-[86vh] sm:min-h-[640px] sm:max-h-[820px] bg-[#efeae2] sm:rounded-2xl shadow-xl overflow-hidden border border-black/10">
+        <div
+          className={`flex flex-col ${
+            inspectorOpen ? "flex-1 min-h-0 lg:flex-initial" : "h-full min-h-0"
+          } rounded-none md:h-[min(860px,calc(100vh-2rem))] md:rounded-2xl bg-[#efeae2] shadow-xl overflow-hidden border-0 md:border md:border-black/10`}
+        >
           {/* WhatsApp Header */}
-          <header className="bg-[#075e54] text-white px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md z-10">
+          <header className="bg-[#075e54] text-white px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md z-10 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative shrink-0">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 text-slate-900 font-bold flex items-center justify-center text-base shadow-inner">
@@ -340,7 +351,7 @@ export default function WhatsAppSimulator({
 
           {/* Session Handoff Status Banner */}
           {handedOffSession && (
-            <div className="bg-amber-100 border-b border-amber-300 px-3.5 py-2 flex items-center justify-between gap-2 text-xs text-amber-950">
+            <div className="bg-amber-100 border-b border-amber-300 px-3.5 py-2 flex items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
               <div className="flex items-center gap-2 font-semibold">
                 <span>👤</span>
                 <span>تم تحويل المحادثة لموظف المبيعات</span>
@@ -352,7 +363,10 @@ export default function WhatsAppSimulator({
           )}
 
           {/* Chat Wallpaper & Messages */}
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 wa-chat-wallpaper">
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-3 wa-chat-wallpaper"
+          >
             {/* Encryption-style reassurance pill */}
             <div className="flex justify-center">
               <div className="bg-[#fff5c4] text-slate-700 text-[11px] px-3 py-1 rounded-lg shadow-xs text-center max-w-xs">
@@ -418,12 +432,10 @@ export default function WhatsAppSimulator({
                 {errorBanner}
               </div>
             )}
-
-            <div ref={chatEndRef} />
           </div>
 
           {/* Quick-test Prompt Chips */}
-          <div className="bg-[#f0f2f5] border-t border-slate-200/80 px-2.5 pt-2 pb-1">
+          <div className="bg-[#f0f2f5] border-t border-slate-200/80 px-2.5 pt-2 pb-1 shrink-0">
             <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               {quickPrompts.map((prompt) => (
                 <button
@@ -445,7 +457,7 @@ export default function WhatsAppSimulator({
               e.preventDefault();
               sendMessage(input);
             }}
-            className="bg-[#f0f2f5] px-2.5 py-2 flex items-center gap-2"
+            className="bg-[#f0f2f5] px-2.5 py-2 flex items-center gap-2 shrink-0"
           >
             <input
               type="text"
@@ -453,7 +465,7 @@ export default function WhatsAppSimulator({
               onChange={(e) => setInput(e.target.value)}
               placeholder="اكتب رسالتك هنا..."
               disabled={isLoading}
-              className="flex-1 bg-white rounded-full px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#075e54]/30 shadow-2xs disabled:opacity-60"
+              className="flex-1 bg-white rounded-full px-4 py-2.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#075e54]/30 shadow-2xs disabled:opacity-60"
             />
             <button
               type="submit"
@@ -477,7 +489,7 @@ export default function WhatsAppSimulator({
         {inspectorOpen && (
           <aside
             dir="ltr"
-            className="bg-slate-900 text-slate-100 sm:rounded-2xl shadow-xl border border-slate-800 flex flex-col h-[50vh] lg:h-[86vh] lg:min-h-[640px] lg:max-h-[820px] overflow-hidden"
+            className="bg-slate-900 text-slate-100 md:rounded-2xl shadow-xl border border-slate-800 flex flex-col h-[34dvh] shrink-0 lg:h-[min(860px,calc(100vh-2rem))] overflow-hidden"
           >
             <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
               <div>
