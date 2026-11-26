@@ -1,4 +1,4 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import WhatsAppSimulator from "@/components/WhatsAppSimulator";
 import { isGeminiConfigured } from "@/lib/agent";
@@ -12,6 +12,46 @@ export const viewport: Viewport = {
   initialScale: 1,
   interactiveWidget: "resizes-content",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  try {
+    const store = loadStore(slug);
+    const storeName = store.config.storeName;
+    const title = `تجربة المساعد الذكي — ${storeName}`;
+    const description = `جرّب مستشار المبيعات الذكي المخصص لمتجر ${storeName}: رد فوري على الأسعار وتوفر القطع وتابي وتمارا وروابط الشراء المباشرة.`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        locale: "ar_SA",
+        type: "website",
+      },
+      twitter: {
+        card: "summary",
+        title,
+        description,
+      },
+    };
+  } catch (error) {
+    if (error instanceof StoreNotFoundError) {
+      return {
+        title: "تجربة المساعد الذكي لمتاجر الذهب والمجوهرات",
+        description:
+          "جرّب مستشار المبيعات الذكي المخصص لمتاجر سلة وزد: رد فوري على الأسعار وتوفر القطع وتابي وتمارا وروابط الشراء المباشرة.",
+      };
+    }
+    throw error;
+  }
+}
 
 function cleanCategoryLabel(rawCategory: string): string {
   const stripped = rawCategory.replace(/\s*\([^)]*\)\s*/g, "").trim();
