@@ -102,6 +102,35 @@ function renderMessageContent(text: string): React.ReactNode {
   });
 }
 
+type RtlScrollMode = "negative" | "default" | "reverse";
+
+function detectRtlScrollMode(): RtlScrollMode {
+  if (typeof document === "undefined") return "negative";
+  const probe = document.createElement("div");
+  probe.dir = "rtl";
+  probe.style.width = "4px";
+  probe.style.height = "1px";
+  probe.style.overflow = "scroll";
+  probe.style.position = "absolute";
+  probe.style.top = "-9999px";
+  probe.style.visibility = "hidden";
+  const inner = document.createElement("div");
+  inner.style.width = "8px";
+  inner.style.height = "1px";
+  probe.appendChild(inner);
+  document.body.appendChild(probe);
+
+  let mode: RtlScrollMode = "negative";
+  if (probe.scrollLeft > 0) {
+    mode = "default";
+  } else {
+    probe.scrollLeft = 1;
+    mode = probe.scrollLeft === 0 ? "negative" : "reverse";
+  }
+  document.body.removeChild(probe);
+  return mode;
+}
+
 export default function WhatsAppSimulator({
   storeSlug,
   storeName,
@@ -132,10 +161,95 @@ export default function WhatsAppSimulator({
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const chipsContainerRef = useRef<HTMLDivElement | null>(null);
+  const rtlScrollModeRef = useRef<RtlScrollMode>("negative");
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const updateChipsScrollState = () => {
+    const el = chipsContainerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 2) {
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+      return;
+    }
+
+    const sl = el.scrollLeft;
+    const mode = rtlScrollModeRef.current;
+
+    if (mode === "negative") {
+      // Standard CSSOM RTL: 0 at right edge (start), -maxScroll at left edge (end)
+      setCanScrollPrev(sl < -2);
+      setCanScrollNext(sl > -(maxScroll - 2));
+    } else if (mode === "default") {
+      // Legacy RTL: maxScroll at right edge (start), 0 at left edge (end)
+      setCanScrollPrev(sl < maxScroll - 2);
+      setCanScrollNext(sl > 2);
+    } else {
+      // Reverse RTL: 0 at left edge, maxScroll at right edge
+      setCanScrollPrev(sl > 2);
+      setCanScrollNext(sl < maxScroll - 2);
+    }
+  };
 
   useEffect(() => {
     setSessionId(createSessionId());
   }, []);
+
+  useEffect(() => {
+    rtlScrollModeRef.current = detectRtlScrollMode();
+    updateChipsScrollState();
+
+    const el = chipsContainerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 2) return;
+
+      // Only intercept vertical mouse-wheel scrolling; let native horizontal trackpad swipes pass through
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || e.deltaY === 0) return;
+
+      e.preventDefault();
+      const rawDelta = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+      const mode = rtlScrollModeRef.current;
+      const horizontalDelta = mode === "reverse" ? rawDelta : -rawDelta;
+      el.scrollBy({ left: horizontalDelta, behavior: "smooth" });
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateChipsScrollState())
+        : null;
+    resizeObserver?.observe(el);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("resize", updateChipsScrollState);
+
+    return () => {
+      resizeObserver?.disconnect();
+      el.removeEventListener("wheel", onWheel);
+      window.removeEventListener("resize", updateChipsScrollState);
+    };
+  }, [quickPrompts, isInspectorVisible]);
+
+  function scrollChipsBy(direction: "prev" | "next") {
+    const el = chipsContainerRef.current;
+    if (!el) return;
+    const step = 200;
+    const mode = rtlScrollModeRef.current;
+    const delta =
+      mode === "reverse"
+        ? direction === "next"
+          ? step
+          : -step
+        : direction === "next"
+          ? -step
+          : step;
+
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  }
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -434,8 +548,12 @@ export default function WhatsAppSimulator({
           </div>
 
           {/* Quick-test Prompt Chips */}
-          <div className="bg-[#f0f2f5] border-t border-slate-200/80 px-2.5 pt-2 pb-1 shrink-0">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          <div className="relative bg-[#f0f2f5] border-t border-slate-200/80 px-2.5 pt-2 pb-1 shrink-0">
+            <div
+              ref={chipsContainerRef}
+              onScroll={updateChipsScrollState}
+              className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+            >
               {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
@@ -448,6 +566,34 @@ export default function WhatsAppSimulator({
                 </button>
               ))}
             </div>
+
+            {/* Right edge fade + prev arrow (earlier chips in RTL) */}
+            {canScrollPrev && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5 pl-5 bg-gradient-to-l from-[#f0f2f5] via-[#f0f2f5]/90 to-transparent">
+                <button
+                  type="button"
+                  onClick={() => scrollChipsBy("prev")}
+                  aria-label="الرسائل السريعة السابقة"
+                  className="pointer-events-auto w-6 h-6 rounded-full bg-white/95 hover:bg-white text-[#075e54] border border-slate-200/90 shadow-sm flex items-center justify-center text-sm font-bold leading-none transition cursor-pointer"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+
+            {/* Left edge fade + next arrow (more chips in RTL) */}
+            {canScrollNext && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-1.5 pr-5 bg-gradient-to-r from-[#f0f2f5] via-[#f0f2f5]/90 to-transparent">
+                <button
+                  type="button"
+                  onClick={() => scrollChipsBy("next")}
+                  aria-label="المزيد من الرسائل السريعة"
+                  className="pointer-events-auto w-6 h-6 rounded-full bg-white/95 hover:bg-white text-[#075e54] border border-slate-200/90 shadow-sm flex items-center justify-center text-sm font-bold leading-none transition cursor-pointer"
+                >
+                  ‹
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Composer Bar */}
