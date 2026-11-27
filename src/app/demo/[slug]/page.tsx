@@ -126,7 +126,7 @@ function buildDynamicQuickPrompts(store: LoadedStore): string[] {
 
 interface DemoStorePageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ debug?: string }>;
+  searchParams: Promise<{ debug?: string; inspector?: string }>;
 }
 
 export default async function DemoStorePage({
@@ -146,7 +146,10 @@ export default async function DemoStorePage({
     throw error;
   }
 
-  const initialDebug = resolvedSearch.debug === "1" || resolvedSearch.debug === "true";
+  const showInspector =
+    resolvedSearch.debug === "1" ||
+    resolvedSearch.debug === "true" ||
+    resolvedSearch.inspector === "1";
   const apiKeyConfigured = isGeminiConfigured();
   const quickPrompts = buildDynamicQuickPrompts(store);
 
@@ -158,7 +161,7 @@ export default async function DemoStorePage({
       humanHandoffPhone={store.config.humanHandoffPhone}
       catalogCount={store.catalog.length}
       quickPrompts={quickPrompts}
-      initialDebug={initialDebug}
+      showInspector={showInspector}
       initialApiKeyMissing={!apiKeyConfigured}
     />
   );

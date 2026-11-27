@@ -21,7 +21,7 @@ interface WhatsAppSimulatorProps {
   humanHandoffPhone: string;
   catalogCount: number;
   quickPrompts: string[];
-  initialDebug: boolean;
+  showInspector?: boolean;
   initialApiKeyMissing: boolean;
 }
 
@@ -109,7 +109,7 @@ export default function WhatsAppSimulator({
   humanHandoffPhone,
   catalogCount,
   quickPrompts,
-  initialDebug,
+  showInspector = false,
   initialApiKeyMissing,
 }: WhatsAppSimulatorProps) {
   const [sessionId, setSessionId] = useState<string>("");
@@ -126,7 +126,8 @@ export default function WhatsAppSimulator({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [handedOffSession, setHandedOffSession] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(initialDebug);
+  const [inspectorOpen, setInspectorOpen] = useState(showInspector);
+  const isInspectorVisible = showInspector && inspectorOpen;
   const [apiKeyMissing, setApiKeyMissing] = useState(initialApiKeyMissing);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
@@ -285,17 +286,15 @@ export default function WhatsAppSimulator({
 
       {/* Main Container (Mobile-first WhatsApp frame + optional Collapsible Developer Inspector) */}
       <div
-        className={`w-full flex-1 min-h-0 md:flex-initial ${
-          inspectorOpen
+        className={`w-full flex-1 min-h-0 md:flex-initial ${isInspectorVisible
             ? "max-w-5xl flex flex-col lg:grid lg:grid-cols-[1fr_400px] gap-2 md:gap-4"
             : "max-w-md"
-        }`}
+          }`}
       >
         {/* WhatsApp Phone Frame */}
         <div
-          className={`flex flex-col ${
-            inspectorOpen ? "flex-1 min-h-0 lg:flex-initial" : "h-full min-h-0"
-          } rounded-none md:h-[min(860px,calc(100vh-2rem))] md:rounded-2xl bg-[#efeae2] shadow-xl overflow-hidden border-0 md:border md:border-black/10`}
+          className={`flex flex-col ${isInspectorVisible ? "flex-1 min-h-0 lg:flex-initial" : "h-full min-h-0"
+            } rounded-none md:h-[min(860px,calc(100vh-2rem))] md:rounded-2xl bg-[#efeae2] shadow-xl overflow-hidden border-0 md:border md:border-black/10`}
         >
           {/* WhatsApp Header */}
           <header className="bg-[#075e54] text-white px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-md z-10 shrink-0">
@@ -325,18 +324,19 @@ export default function WhatsAppSimulator({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setInspectorOpen((v) => !v)}
-                className={`text-[11px] px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${
-                  inspectorOpen
-                    ? "bg-white text-[#075e54] border-white font-semibold"
-                    : "bg-white/10 hover:bg-white/20 text-white/90 border-white/20"
-                }`}
-                title="فاحص الأدوات للمطورين (Zero-Hallucination Inspector)"
-              >
-                {inspectorOpen ? "إخفاء الفاحص" : "🛠️ الفاحص"}
-              </button>
+              {showInspector && (
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen((v) => !v)}
+                  className={`text-[11px] px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${inspectorOpen
+                      ? "bg-white text-[#075e54] border-white font-semibold"
+                      : "bg-white/10 hover:bg-white/20 text-white/90 border-white/20"
+                    }`}
+                  title="فاحص الأدوات للمطورين (Zero-Hallucination Inspector)"
+                >
+                  {inspectorOpen ? "إخفاء الفاحص" : "🛠️ الفاحص"}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -382,11 +382,10 @@ export default function WhatsAppSimulator({
                   className={`flex flex-col ${isUser ? "items-start" : "items-end"}`}
                 >
                   <div
-                    className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs text-sm leading-relaxed ${
-                      isUser
+                    className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs text-sm leading-relaxed ${isUser
                         ? "bg-[#d9fdd3] text-slate-900 rounded-tr-xs"
                         : "bg-white text-slate-900 rounded-tl-xs"
-                    }`}
+                      }`}
                   >
                     <div className="whitespace-pre-wrap break-words">
                       {renderMessageContent(msg.text)}
@@ -401,7 +400,7 @@ export default function WhatsAppSimulator({
                     )}
 
                     <div className="mt-1 flex items-center justify-end gap-1.5 text-[10px] text-slate-500">
-                      {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && inspectorOpen && (
+                      {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && isInspectorVisible && (
                         <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded font-mono">
                           {msg.toolCalls.length} tool{msg.toolCalls.length > 1 ? "s" : ""}
                         </span>
@@ -436,7 +435,7 @@ export default function WhatsAppSimulator({
 
           {/* Quick-test Prompt Chips */}
           <div className="bg-[#f0f2f5] border-t border-slate-200/80 px-2.5 pt-2 pb-1 shrink-0">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
               {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
@@ -485,8 +484,8 @@ export default function WhatsAppSimulator({
           </form>
         </div>
 
-        {/* Collapsible Developer Inspector Panel (OFF by default unless toggled or ?debug=1) */}
-        {inspectorOpen && (
+        {/* Collapsible Developer Inspector Panel (only shown when ?debug=1 or ?inspector=1) */}
+        {isInspectorVisible && (
           <aside
             dir="ltr"
             className="bg-slate-900 text-slate-100 md:rounded-2xl shadow-xl border border-slate-800 flex flex-col h-[34dvh] shrink-0 lg:h-[min(860px,calc(100vh-2rem))] overflow-hidden"
